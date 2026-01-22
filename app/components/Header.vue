@@ -37,6 +37,7 @@
             color="neutral"
             trailing-icon="i-lucide-log-in"
             size="md"
+             href="giris-yap"
             >Giriş Yap</UButton
           >
 
@@ -45,6 +46,7 @@
             color="secondary"
             trailing-icon="i-lucide-user-plus"
             size="md"
+            href="kayit-ol"
             >Kayıt Ol</UButton
           >
         </div>
