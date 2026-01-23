@@ -48,5 +48,7 @@ export default defineEventHandler(async (event) => {
     maxAge: 7 * 24 * 60 * 60,
   });
 
-  return { accessToken, user: { email: user.email, name: user.name } };
+  return {
+    accessToken,
+  };
 });

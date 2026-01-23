@@ -5,5 +5,6 @@ colorMode.preference = "light";
 <template>
   <UApp>
     <NuxtPage />
+    <UNotifications />
   </UApp>
 </template>

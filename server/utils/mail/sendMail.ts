@@ -8,7 +8,13 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-export const sendEmail = async (to: string, subject: string, html: string) => {
+type SendMailParams = {
+  to: string;
+  subject: string;
+  html: string;
+};
+
+export const sendMail = async ({ to, subject, html }: SendMailParams) => {
   await transporter.sendMail({
     from: `"Ederini Bul | BETA" <${process.env.MAIL_USER}>`,
     to,

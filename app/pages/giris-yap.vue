@@ -1,114 +1,136 @@
 <script setup lang="ts">
-import * as z from 'zod'
-import type { FormSubmitEvent, AuthFormField } from '@nuxt/ui'
-const toast = useToast()
+import * as z from "zod";
+import type { FormSubmitEvent, AuthFormField } from "@nuxt/ui";
+import { ref } from "vue";
 
-// Form alanları
+const toast = useToast();
+const loading = ref(false);
+
 const fields: AuthFormField[] = [
   {
-    name: 'email',
-    type: 'email',
-    label: 'E‑posta Adresi',
-    placeholder: 'ornek@firma.com',
-    required: true
+    name: "email",
+    type: "email",
+    label: "E-posta Adresi",
+    placeholder: "ornek@firma.com",
+    required: true,
   },
   {
-    name: 'password',
-    type: 'password',
-    label: 'Şifre',
-    placeholder: '••••••••',
-    required: true
-  }
-]
+    name: "password",
+    type: "password",
+    label: "Şifre",
+    placeholder: "••••••••",
+    required: true,
+  },
+];
 
-// Doğrulama şeması
 const schema = z.object({
-  email: z.string().email(),
-  password: z.string().min(8)
-})
+  email: z
+    .string({
+      required_error: "E-posta adresi gereklidir",
+      invalid_type_error: "E-posta adresi bir metin olmalıdır",
+    })
+    .email("Lütfen geçerli bir e-posta adresi giriniz"),
+  password: z
+    .string({
+      required_error: "Şifre gereklidir",
+      invalid_type_error: "Şifre bir metin olmalıdır",
+    })
+    .min(8, "Şifre en az 8 karakter olmalıdır"),
+});
 
-type Schema = z.output<typeof schema>
+type Schema = z.output<typeof schema>;
 
-function onSubmit(payload: FormSubmitEvent<Schema>) {
-  if (!agree.value) {
-    showError.value = true
-    return
+async function onSubmit(payload: FormSubmitEvent<Schema>) {
+  loading.value = true;
+
+  try {
+    const { data, error } = await useFetch("/api/auth/login", {
+      method: "POST",
+      body: payload.data,
+    });
+
+    if (error.value) {
+      throw error.value;
+    }
+
+    if (!data.value) {
+      throw new Error("Sunucu yanıt vermedi");
+    }
+
+    toast.add({
+      title: "Başarılı",
+      description: "Giriş başarılı, yönlendiriliyorsunuz...",
+      color: "green",
+      timeout: 2000,
+    });
+
+    await navigateTo("/");
+  } catch (error: any) {
+    const status = error?.statusCode || error?.response?.status;
+    const statusMessage = error?.statusMessage || error?.data?.message;
+
+    const messageMap: { [key: string]: string } = {
+      "Invalid data": "Lütfen geçerli e-posta ve şifre giriniz",
+      "Invalid credentials": "E-posta veya şifre hatalı",
+      "Email not verified": "E-posta adresiniz doğrulanmamış",
+    };
+
+    let message = messageMap[statusMessage] || statusMessage || "Bir hata oluştu, lütfen tekrar deneyin";
+
+    if (status === 500) {
+      message = "Sunucu hatası, lütfen daha sonra tekrar deneyin";
+    }
+
+    toast.add({
+      title: "Giriş Başarısız",
+      description: message,
+      color: "red",
+      timeout: 3000,
+    });
+  } finally {
+    loading.value = false;
   }
-  console.log('Giriş yapıldı', payload)
 }
-
-// Sosyal giriş butonları
-const providers = [
-  {
-    label: 'Google',
-    icon: 'i-simple-icons-google',
-    onClick: () => { toast.add({ title: 'Google', description: 'Google ile giriş yapılıyor...' }) }
-  },
-  {
-    label: 'Apple',
-    icon: 'i-simple-icons-apple',
-    onClick: () => { toast.add({ title: 'Apple', description: 'Apple ile giriş yapılıyor...' }) }
-  }
-]
-
-// Sözleşme kabul
-import { ref } from 'vue'
-const agree = ref(false)
-const showError = ref(false)
 </script>
 
 <template>
   <div class="min-h-screen flex items-center justify-center bg-gray-100 p-4">
-    <UPageCard class="w-full max-w-lg p-10 border border-gray-300 rounded-lg shadow-none">
-
-      <!-- Başlık -->
+    <UPageCard
+      class="w-full max-w-lg p-10 border border-gray-300 rounded-lg shadow-none"
+    >
       <div class="mb-8 text-center">
-        <h1 class="text-3xl font-semibold text-gray-900">Sisteme Giriş</h1>
+        <h1 class="text-3xl font-semibold text-gray-900">Giriş Yapın</h1>
         <p class="text-sm text-gray-500 mt-1">
-          Kurumsal hesabınız ile giriş yapın
+          Ederini Bul hesabınıza giriş yapın
         </p>
       </div>
 
-      <!-- Form -->
       <UAuthForm
         :schema="schema"
         :fields="fields"
         @submit="onSubmit"
-        :providers="providers"
         title=""
         description=""
-        class="space-y-6"
         :ui="{
-          input: 'h-10 w text-xl p-1  focus:border-gray-400'
+          input: 'h-12 text-base focus:border-gray-400',
+          button: 'h-12 text-base font-semibold',
         }"
+        :loading="loading"
+        submit-button-label="Giriş Yap"
       />
 
-      <!-- Sözleşme kabul alanı -->
-      <div class="mt-4 px-2 text-xs text-gray-500 text-center">
-        <UCheckbox
-          v-model="agree"
-          :label="`
-            Google veya Apple kimliğinizle devam ederek 
-            Sözleşmeyi Kabul Ediyorsunuz.
-          `"
-          :danger="!agree && showError"
-          class="text-gray-500 text-xs"
-         
-        />
-      </div>
-
-      <!-- Alt alan -->
-      <div class="mt-6 flex items-center justify-between text-sm text-gray-600">
+      <div class="mt-6 flex justify-between text-sm text-gray-600">
         <NuxtLink to="/sifremi-unuttum" class="hover:underline">
           Şifremi Unuttum
-          
         </NuxtLink>
-        
-        <NuxtLink href="kayit-ol" class="font-medium text-gray-900 hover:underline">
+
+        <NuxtLink
+          to="/kayit-ol"
+          class="font-medium text-gray-900 hover:underline"
+        >
           Kayıt Ol
         </NuxtLink>
       </div>
-
     </UPageCard>
   </div>
 </template>
